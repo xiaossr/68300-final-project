@@ -6,9 +6,22 @@
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; margin: 2rem; max-width: 800px; }
     h1, h2 { color: #333; }
+    code { background: #f5f5f5; padding: 2px 4px; border-radius: 4px; }
     p { margin-bottom: 1em; }
     #references ol { padding-left: 1.2em; }
+    .formula { text-align: center; margin: 1em 0; font-size: 1.1em; }
   </style>
+
+  <!-- MathJax configuration -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
   <article>
@@ -27,16 +40,54 @@
     <section id="background">
       <h2>2. Background and Related Work</h2>
       <p>
-        The original ViT formulation by Dosovitskiy et al. (2020) demonstrated that pure Transformer architectures - when trained on large-scale datasets - can match or surpass CNN performance on image classification tasks [1]. Subsequent variants, such as DeiT (Touvron et al., 2021), improved data efficiency through distillation techniques, but retained the global self-attention mechanism.
+        The original ViT formulation by Dosovitskiy et al. (2020) demonstrated that pure Transformer architectures—when trained on large-scale datasets—can match or surpass CNN performance on image classification tasks [1]. Subsequent variants, such as DeiT (Touvron et al., 2021), improved data efficiency through distillation techniques, but retained the global self-attention mechanism.
       </p>
       <p>
         More recent analyses have probed the inner workings of ViTs. Caron et al. (2023) studied patch-level attention patterns, finding that certain heads specialize in local edge detection while others capture long-range dependencies [2]. Kazemied et al. (2024) extended this by evaluating how token information is retained across layers, suggesting that intermediate layers preserve more spatial structure than very deep or very shallow ones [3]. However, both studies relied primarily on attention-weight visualizations or information-theoretic measures rather than direct perturbation experiments.
       </p>
       <p>
-        In parallel, the LessWrong community's work on multimodal audio interpretability uncovered that - even without spatial architectures - attention mechanisms can develop localized grouping behaviors when tasked with spectrogram representations [4]. These findings inspired our hypothesis that ViTs may likewise reduce to local processing under certain conditions, despite their global connectivity.
+        In parallel, the LessWrong community's work on multimodal audio interpretability uncovered that—even without spatial architectures—attention mechanisms can develop localized grouping behaviors when tasked with spectrogram representations [4]. These findings inspired our hypothesis that ViTs may likewise reduce to local processing under certain conditions, despite their global connectivity.
       </p>
       <p>
         <strong>Literature Gap.</strong> While prior work has catalogued attention weight patterns [2], information retention [3], and analogies in audio models [4], there remains a lack of empirical studies that directly compare the impact of local versus distant token perturbations on final model outputs. In particular, no published work has systematically ablated tokens at varying spatial distances and quantified the resulting performance degradation across layers and heads. Our project fills this gap by designing a perturbation-based framework to measure spatial locality in ViTs at scale, providing both quantitative metrics and qualitative visualizations.
+      </p>
+    </section>
+
+    <section id="formulation">
+      <h2>3. Attention Formulation and Computational Pipeline</h2>
+      <p>
+        We adopt the standard scaled dot-product self-attention mechanism. For each layer <em>l</em> and head <em>h</em>, let
+      </p>
+      <div class="formula">
+        $$\alpha^{(l,h)} \;=\;
+          \mathop{\mathrm{softmax}}\!\Bigl(\frac{Q^{(l,h)}\,K^{(l,h)\,T}}{\sqrt{d_k}}\Bigr)
+          \quad\in\mathbb{R}^{(N+1)\times(N+1)}.$$
+      </div>
+      <p>
+        Here, \(Q^{(l,h)}\) and \(K^{(l,h)}\) are the query and key projections, \(d_k\) is the head dimension, and \(N\) is the number of image patches.  We drop the special [CLS] token by slicing to the patch-to-patch block:
+      </p>
+      <div class="formula">
+        $$A^{(l,h)} = \alpha^{(l,h)}_{\,1\!:\!N,\;1\!:\!N}\;\in\mathbb{R}^{N\times N}.$$
+      </div>
+      <p>
+        To obtain a single attention map per head, we average over a batch of size \(B\):
+      </p>
+      <div class="formula">
+        $$\bar{A}^{(l,h)}_{i,j}
+          = \frac{1}{B}\sum_{b=1}^B
+          A^{(l,h)}_{b,i,j}, \quad
+          i,j=1,\dots,N.$$
+      </div>
+      <p>
+        Given a precomputed distance matrix \(D\in\mathbb{R}^{N\times N}\) where \(D_{i,j}\) is the spatial distance between patch centers, we accumulate:
+      </p>
+      <div class="formula">
+        $$\mathrm{num}^{(l,h)} = \sum_{i,j}\bar{A}^{(l,h)}_{i,j}\,D_{i,j},\quad
+          \mathrm{den}^{(l,h)} = \sum_{i,j}\bar{A}^{(l,h)}_{i,j},\quad
+          \mu^{(l,h)} = \frac{\mathrm{num}^{(l,h)}}{\mathrm{den}^{(l,h)}}.$$
+      </div>
+      <p>
+        All attention formulas here follow the notation and rollout normalization introduced by Chefer et al. (2021) [5].
       </p>
     </section>
 
@@ -46,7 +97,8 @@
         <li>Dosovitskiy, A., et al. “An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale.” <em>ICLR</em>, 2020.</li>
         <li>Caron, M., et al. “Emergent Locality in Vision Transformers.” <em>CVPR</em>, 2023.</li>
         <li>Kazemied, P., et al. “Token Information Retention in Intermediate Layers of Vision Transformers.” <em>NeurIPS</em>, 2024.</li>
-        <li>LessWrong Community Contributors. “Emergent Localized Attention Patterns in Multimodal Audio Models.” <em>LessWrong</em>, 2023. Available at: https://lesswrong.com/</li>
+        <li>LessWrong Community Contributors. “Emergent Localized Attention Patterns in Multimodal Audio Models.” <em>LessWrong</em>, 2023.</li>
+        <li>Chefer, H., Gur, S., &amp; Wolf, L. “Generic Attention-model Explainability for Interpreting Bi-Modal and Encoder-Decoder Transformers.” arXiv:2103.15679, 2021.</li>
       </ol>
     </section>
   </article>
