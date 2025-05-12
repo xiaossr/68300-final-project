@@ -123,12 +123,13 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
 
       <h3>4.3 Token Ablation with k Local/Global Heads</h3>
       <p>
+        The solid blue curve shows that ablating local heads provokes a steep performance drop: accuracy declines from approximately 0.89 at \(k=0\) to 0.80 at \(k=5\), to 0.69 at \(k=10\), and ultimately to under 0.55 by \(k=20\). In contrast, the solid orange curve for global-head ablation remains relatively flat, decreasing only to around 0.85 at \(k=5\), 0.78 at \(k=15\), and holding above 0.75 even when twenty global heads are removed. The dashed line at 0.89 denotes the unablated baseline.
         Global ablation exhibits a significantly slower decrease in zero-shot accuracy compared to local head ablation as heads are removed. The sharper performance degradation when ablating local heads demonstrates that ViT's CIFAR-10 classifier leans heavily on short-range, spatially local interactions. Even though ViTs are architecturally 'global,' their learned attention patterns include crucial local-neighborhood features.
       </p>
       <p>
         In contrast, heads specializing in long-range (global) dependencies can be removed with relatively minor accuracy loss - implying that distant-token information is secondary for this task. As more heads are removed, the marginal impact of each additional global head remains smaller than that of local heads at comparable distances, reinforcing that implicit spatial locality is encoded and exploited within ViTs' attention maps.
       </p>
-      <img src="figures/ablation_accuracy_CLIP.png" alt="Token ablation accuracy for local/global heads">
+      <img src="figures/ablation_accuracy_CLIP_k25.png" alt="Token ablation accuracy for local/global heads">
     </section>
 
     <section id="conclusion">
