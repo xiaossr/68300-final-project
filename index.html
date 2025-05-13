@@ -190,8 +190,8 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
       <p>
         Global ablation exhibits a significantly slower decrease in zero-shot accuracy compared to local head ablation as heads are removed. The sharper performance degradation when ablating local heads demonstrates that ViT's CIFAR-10 classifier leans heavily on short-range, spatially local interactions. Even though ViTs are architecturally 'global,' their learned attention patterns include crucial local-neighborhood features.
       </p>
-      <img src="figures/ablation_accuracy_CLIP.png" alt="Ablation accuracy">
-      <img src="figures/ablation_distance_CLIP.png" alt="Average distance of ablated tokens">
+      <img src="figures/ablation_accuracy_CLIP_k25.png" alt="Ablation accuracy">
+      <img src="figures/ablation_distance_CLIP_k25.png" alt="Average distance of ablated tokens">
       <p>
         Notably, the average distance of locally ablated tokens remains below 2.0 even when up to 25 heads are removed, whereas globally ablated tokens average over 3.5. This confirms that our local/global head selection effectively separates short-range from long-range attention.      </p>
     </section>
