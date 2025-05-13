@@ -197,7 +197,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
     
       <h3>4.4 Analysis on a Single COCO Image and CLIP ViT-L/14 with 336 px patches</h3>
       <p>
-        We analyze token-distance bias using a single COCO 2017 validation image at 336x336 resolution, processed by CLIP ViT-L/14 with 336 px patches (<code>model: openai/clip-vit-large-patch14-336</code>). For each of the 24 transformer layers, we plot the average self-attention weight as a function of normalized patch-to-patch distance (corner→corner normalized to 1).
+        To demonstrate the potential generalizability of our results, we analyze token-distance bias using a single COCO 2017 validation image at 336x336 resolution, processed by CLIP ViT-L/14 with 336 px patches (<code>model: openai/clip-vit-large-patch14-336</code>). For each of the 24 transformer layers, we plot the average self-attention weight as a function of normalized patch-to-patch distance (corner→corner normalized to 1).
       </p>
       <img src="figures/token_distance_bias_with_zoom_CLIP_COCO.png" alt="Zoomed token-distance bias curves">
       <p>
@@ -209,7 +209,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
       <p>
         <strong>Interpretation: </strong>Despite the global receptive field granted by self-attention, CLIP's ViT-L/14 backbone strongly biases attention toward nearby tokens at all depths. This emergent spatial locality suggests that - even on complex COCO imagery - local patch interactions form the backbone of the model's internal representations, with global context layered on top rather than relied upon exclusively.
       </p>
-      <h4>4.1.1 Center vs. Edge Queries</h4>
+      <h4>4.4.1 Center vs. Edge Queries</h4>
       <p>
         We compare average attention-distance curves when the query patch is at the image center vs. a corner. Let
       </p>
@@ -225,7 +225,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         <strong>Implication:</strong> There is positional asymmetry in self-attention: center tokens concentrate on immediate vicinity, whereas border/corner tokens compensate by attending to specific mid-range or opposite patches. This boundary effect is baked into the model's geometry and could influence feature formation near image edges vs. interior.
       </p>
       
-      <h4>4.1.2 Attention Rollout</h4>
+      <h4>4.4.2 Attention Rollout</h4>
       <p>
         We compute rollout heatmaps after k layers to visualize CLS's effective receptive field:
       </p>
