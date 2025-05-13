@@ -44,7 +44,7 @@
       <p>
         The LessWrong community's work on multimodal audio interpretability uncovered that - even without spatial architectures - attention mechanisms can develop localized grouping behaviors when tasked with spectrogram representations [4]. These findings inspired our hypothesis that ViTs (and CLIP's ViT backbone) may likewise reduce to local processing under certain conditions, despite their global connectivity.      </p>
       <p>
-        <strong>Literature Gap.</strong>While prior work has catalogued attention weight patterns [2], information retention [3], analogies in audio models [4], and demonstrated CLIP's generality [6], there remains a lack of empirical studies that directly compare the impact of local versus distant token perturbations on model outputs. No published work has systematically ablated tokens at varying spatial distances and quantified the resulting performance degradation across layers and heads. Our project fills this gap with a perturbation-based framework to measure spatial locality in ViTs at scale.
+        <strong>Literature Gap.</strong> While prior work has catalogued attention weight patterns [2], information retention [3], analogies in audio models [4], and demonstrated CLIP's generality [6], there remains a lack of empirical studies that directly compare the impact of local versus distant token perturbations on model outputs. No published work has systematically ablated tokens at varying spatial distances and quantified the resulting performance degradation across layers and heads. Our project fills this gap with a perturbation-based framework to measure spatial locality in ViTs at scale.
       </p>
     </section>
 
@@ -131,43 +131,43 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
     <section id="results">
       <h2>4. Results</h2>
 
-      <h3>4.1 Token-Distance Bias on a Single COCO Image</h3>
+      <h3>4.1 Strong Spatial Locality Across Patches</h3>
       <p>
-        We analyze token-distance bias using a single COCO 2017 validation image at 336x336 resolution, processed by CLIP ViT-L/14 with 336 px patches (<code>model: openai/clip-vit-large-patch14-336</code>). For each of the 24 transformer layers, we plot the average self-attention weight as a function of normalized patch-to-patch distance (corner→corner normalized to 1).
+        Across all layers and heads, we observe steep attention-weight decay with distance, confirming strong spatial locality throughout the model. Early layers show the sharpest drops, while deeper layers gradually flatten, indicating a progressive incorporation of global context.
       </p>
-      <img src="figures/token_distance_bias_with_zoom_CLIP.png" alt="Zoomed token-distance bias curves">
-      <p>
-        The plots show a pronounced concentration of attention on very nearby patches. In the full view (top), nearly all layers place over 50% of their attention mass within the closest 5% of the image extent. The zoomed inset (bottom) reveals that attention weight decays by an order of magnitude by a normalized distance of ~0.1 and then flattens near zero beyond ~0.2.
-      </p>
-      <p>
-        <strong>Layerwise patterns:</strong> Early layers (0-5) exhibit the steepest decay, with most weight on immediate neighbors (d < 0.05). Middle layers (6-15) show a more gradual fall-off, integrating slightly broader context while retaining locality. Even in the final layers (16-23), attention remains heavily skewed toward local patches, with distant-token weights remaining below 1-2% on average.
-      </p>
-      <p>
-        <strong>Interpretation: </strong>Despite the global receptive field granted by self-attention, CLIP's ViT-L/14 backbone strongly biases attention toward nearby tokens at all depths. This emergent spatial locality suggests that - even on complex COCO imagery - local patch interactions form the backbone of the model's internal representations, with global context layered on top rather than relied upon exclusively.
-      </p>
-      <h4>4.1.1 Center vs. Edge Queries</h4>
-      <p>
-        We compare average attention-distance curves when the query patch is at the image center vs. a corner. Let
-      </p>
-      <div class="formula">
-        $$\bar{A}_\text{center}(d),\quad \bar{A}_\text{corner}(d).$$
-      </div>
-      <img src="figures/center_corner_locality_CLIP.png" alt="Center vs. corner locality">
-      <p>
-        <strong>Interpretation:</strong> Center patches are more local: a strong peak at d≈0-0.2, then rapid fall-off.
-          Corner patches have weaker local peak (fewer neighbors) and spikes at d≈0.65-0.75, corresponding to opposite edges.
-      </p>
-      <p>
-        <strong>Implication:</strong> There is positional asymmetry in self-attention: center tokens concentrate on immediate vicinity, whereas border/corner tokens compensate by attending to specific mid-range or opposite patches. This boundary effect is baked into the model's geometry and could influence feature formation near image edges vs. interior.
-      </p>
+      <img src="figures/token_distance_bias_CLIP.png" alt="Token-distance bias curves for each layer in CLIP's ViT">
 
-      <h4>4.1.2 Attention Rollout</h4>
+      <p>The table below shows, for each layer, the single most 'local' head (smallest mean Euclidean distance) and the single most 'global' head (largest mean Euclidean distance):</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Layer</th>
+            <th>Local Head Index</th>
+            <th>Local Mean Distance</th>
+            <th>Global Head Index</th>
+            <th>Global Mean Distance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>0</td><td>8</td><td>0.9144</td><td>3</td><td>3.7583</td></tr>
+          <tr><td>1</td><td>11</td><td>1.1327</td><td>9</td><td>3.3411</td></tr>
+          <tr><td>2</td><td>3</td><td>1.1799</td><td>8</td><td>3.6848</td></tr>
+          <tr><td>3</td><td>5</td><td>1.2347</td><td>10</td><td>3.8939</td></tr>
+          <tr><td>4</td><td>4</td><td>1.2922</td><td>2</td><td>3.4153</td></tr>
+          <tr><td>5</td><td>5</td><td>1.9311</td><td>1</td><td>3.6301</td></tr>
+          <tr><td>6</td><td>10</td><td>2.0669</td><td>0</td><td>3.5240</td></tr>
+          <tr><td>7</td><td>10</td><td>0.8289</td><td>11</td><td>4.0369</td></tr>
+          <tr><td>8</td><td>1</td><td>2.7692</td><td>11</td><td>3.6648</td></tr>
+          <tr><td>9</td><td>10</td><td>2.9206</td><td>0</td><td>3.4444</td></tr>
+          <tr><td>10</td><td>1</td><td>3.0504</td><td>4</td><td>3.5865</td></tr>
+          <tr><td>11</td><td>1</td><td>3.3551</td><td>8</td><td>3.6279</td></tr>
+        </tbody>
+      </table>
       <p>
-        We compute rollout heatmaps after k layers to visualize CLS's effective receptive field:
+        In the earliest layers (0-3), the most local heads have very low mean distances (around 0.9-1.2), indicating tight focus on immediate neighbors, while the most global heads range around 3.3-3.9, capturing far-flung tokens. By layer 7, the single most local head drops to 0.8289, showing extreme locality, and the most global head peaks at 4.0369. Deeper layers (8-11) see local heads’ mean distances increase (up to ~3.35), suggesting that even 'local' heads start to integrate broader context as depth grows. Global-head distances remain relatively stable (~3.4-3.9), implying a consistent far-range role across the network.
       </p>
-      <img src="figures/attention_rollout_CLIP.png" alt="Attention rollout heatmap">
       <p>
-        In this heatmap, bright yellow patches (≈1.0) are the strongest contributors to the final pooled feature, whereas dark purple patches (≈0.25) contribute minimally.        
+        Overall, early layers specialize in extracting fine-grained, local features, while later layers gradually blend in more global context. For CLIP and similar ViT-based models, this pattern suggests a two-stage processing: first, capture local texture and edges; then, integrate them into a holistic image understanding. Understanding these head-wise roles can guide targeted interventions (e.g., freezing or pruning specific heads) and inspire hybrid architectures that explicitly allocate local vs. global processing capacities.
       </p>
 
       <h3>4.2 Attention Radius Constraint</h3>
@@ -194,6 +194,45 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
       <img src="figures/ablation_distance_CLIP_k25.png" alt="Average distance of ablated tokens">
       <p>
         Notably, the average distance of locally ablated tokens remains below 2.0 even when up to 25 heads are removed, whereas globally ablated tokens average over 3.5. This confirms that our local/global head selection effectively separates short-range from long-range attention.      </p>
+    
+      <h3>4.4 Analysis on a Single COCO Image and CLIP ViT-L/14 with 336 px patches</h3>
+      <p>
+        We analyze token-distance bias using a single COCO 2017 validation image at 336x336 resolution, processed by CLIP ViT-L/14 with 336 px patches (<code>model: openai/clip-vit-large-patch14-336</code>). For each of the 24 transformer layers, we plot the average self-attention weight as a function of normalized patch-to-patch distance (corner→corner normalized to 1).
+      </p>
+      <img src="figures/token_distance_bias_with_zoom_CLIP_COCO.png" alt="Zoomed token-distance bias curves">
+      <p>
+        The plots show a pronounced concentration of attention on very nearby patches. In the full view (top), nearly all layers place over 50% of their attention mass within the closest 5% of the image extent. The zoomed inset (bottom) reveals that attention weight decays by an order of magnitude by a normalized distance of ~0.1 and then flattens near zero beyond ~0.2.
+      </p>
+      <p>
+        <strong>Layerwise patterns:</strong> Early layers (0-5) exhibit the steepest decay, with most weight on immediate neighbors (d < 0.05). Middle layers (6-15) show a more gradual fall-off, integrating slightly broader context while retaining locality. Even in the final layers (16-23), attention remains heavily skewed toward local patches, with distant-token weights remaining below 1-2% on average.
+      </p>
+      <p>
+        <strong>Interpretation: </strong>Despite the global receptive field granted by self-attention, CLIP's ViT-L/14 backbone strongly biases attention toward nearby tokens at all depths. This emergent spatial locality suggests that - even on complex COCO imagery - local patch interactions form the backbone of the model's internal representations, with global context layered on top rather than relied upon exclusively.
+      </p>
+      <h4>4.1.1 Center vs. Edge Queries</h4>
+      <p>
+        We compare average attention-distance curves when the query patch is at the image center vs. a corner. Let
+      </p>
+      <div class="formula">
+        $$\bar{A}_\text{center}(d),\quad \bar{A}_\text{corner}(d).$$
+      </div>
+      <img src="figures/center_corner_locality_CLIP.png" alt="Center vs. corner locality">
+      <p>
+        <strong>Interpretation:</strong> Center patches are more local: a strong peak at d≈0-0.2, then rapid fall-off.
+          Corner patches have weaker local peak (fewer neighbors) and spikes at d≈0.65-0.75, corresponding to opposite edges.
+      </p>
+      <p>
+        <strong>Implication:</strong> There is positional asymmetry in self-attention: center tokens concentrate on immediate vicinity, whereas border/corner tokens compensate by attending to specific mid-range or opposite patches. This boundary effect is baked into the model's geometry and could influence feature formation near image edges vs. interior.
+      </p>
+      
+      <h4>4.1.2 Attention Rollout</h4>
+      <p>
+        We compute rollout heatmaps after k layers to visualize CLS's effective receptive field:
+      </p>
+      <img src="figures/attention_rollout_CLIP.png" alt="Attention rollout heatmap">
+      <p>
+        In this heatmap, bright yellow patches (≈1.0) are the strongest contributors to the final pooled feature, whereas dark purple patches (≈0.25) contribute minimally.        
+      </p>
     </section>
 
     <section id="conclusion">
