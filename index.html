@@ -26,7 +26,7 @@
       <p>
         Vision Transformers (ViTs) have revolutionized image recognition by replacing convolutional operations with global self-attention, achieving top-tier performance on benchmarks like CIFAR-10. Unlike convolutional neural networks (CNNs), which build in local receptive fields by design, ViTs operate over sequences of image patches with no explicit bias toward nearby pixels. Yet practitioners and theorists alike have noted that ViTs often display strong local behavior, especially in early layers, hinting at an emergent spatial inductive bias.      </p>
       <p>
-        Understanding how ViTs balance global context against local structure is critical for interpretability and for guiding architectural improvements. If local interactions dominate early layers, one might imagine hybrid models that explicitly combine convolutional kernels with self-attention. Conversely, if global heads already capture most of the information, simpler Transformer-only designs may suffice. Our project explores this tension by systematically perturbing token representations at various spatial distances and measuring the effect on downstream predictions. By ablating ‘local' versus ‘distant' tokens in a controlled manner, we aim to quantify the true importance of spatial locality in each attention head and layer.      </p>
+        Understanding how ViTs balance global context against local structure is critical for interpretability and for guiding architectural improvements. If local interactions dominate early layers, one might imagine hybrid models that explicitly combine convolutional kernels with self-attention. Conversely, if global heads already capture most of the information, simpler Transformer-only designs may suffice. Our project explores this tension by systematically perturbing token representations at various spatial distances and measuring the effect on downstream predictions. By ablating 'local' versus 'distant' tokens in a controlled manner, we aim to quantify the true importance of spatial locality in each attention head and layer.      </p>
       <p>
         <em>Note:</em> We use CIFAR-10 and the ViT-base-patch-32 model due to limited available compute. This setup serves as a quick prototype and benchmarking platform before scaling to larger datasets or models.
       </p>
@@ -103,7 +103,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         $$R = \prod_{l=1}^k (\alpha^{(l)} + I),$$
       </div>
       <p>
-        where \(I\) adds residual identity. The resulting heatmap \(R\) shows each patch’s influence on the final representation.
+        where \(I\) adds residual identity. The resulting heatmap \(R\) shows each patch's influence on the final representation.
       </p>
 
       <h3>3.6 Attention Masking</h3>
@@ -133,9 +133,12 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
 
       <h3>4.1 Token-Distance Bias on a Single COCO Image</h3>
       <p>
-        We analyze token-distance bias using a single COCO 2017 validation image at 336×336 resolution, processed by CLIP ViT-L/14 with 336 px patches (<code>model: openai/clip-vit-large-patch14-336</code>). For each of the 24 transformer layers, we plot the average self-attention weight as a function of normalized patch-to-patch distance (corner→corner normalized to 1).      </p>
+        We analyze token-distance bias using a single COCO 2017 validation image at 336x336 resolution, processed by CLIP ViT-L/14 with 336 px patches (<code>model: openai/clip-vit-large-patch14-336</code>). For each of the 24 transformer layers, we plot the average self-attention weight as a function of normalized patch-to-patch distance (corner→corner normalized to 1).
+      </p>
       <img src="figures/token_distance_bias_with_zoom_CLIP.png" alt="Zoomed token-distance bias curves">
-      <p>The plots show a pronounced concentration of attention on very nearby patches. In the full view (top), nearly all layers place over 50% of their attention mass within the closest 5% of the image extent. The zoomed inset (bottom) reveals that attention weight decays by an order of magnitude by a normalized distance of ~0.1 and then flattens near zero beyond ~0.2.</p>
+      <p>
+        The plots show a pronounced concentration of attention on very nearby patches. In the full view (top), nearly all layers place over 50% of their attention mass within the closest 5% of the image extent. The zoomed inset (bottom) reveals that attention weight decays by an order of magnitude by a normalized distance of ~0.1 and then flattens near zero beyond ~0.2.
+      </p>
       <p>
         <strong>Layerwise patterns:</strong> Early layers (0-5) exhibit the steepest decay, with most weight on immediate neighbors (d < 0.05). Middle layers (6-15) show a more gradual fall-off, integrating slightly broader context while retaining locality. Even in the final layers (16-23), attention remains heavily skewed toward local patches, with distant-token weights remaining below 1-2% on average.
       </p>
@@ -155,12 +158,12 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
           Corner patches have weaker local peak (fewer neighbors) and spikes at d≈0.65-0.75, corresponding to opposite edges.
       </p>
       <p>
-        <strong>Implication:</strong> There is positional asymmetry in self‐attention: center tokens concentrate on immediate vicinity, whereas border/corner tokens compensate by attending to specific mid‑range or opposite patches. This boundary effect is baked into the model’s geometry and could influence feature formation near image edges vs. interior.
+        <strong>Implication:</strong> There is positional asymmetry in self-attention: center tokens concentrate on immediate vicinity, whereas border/corner tokens compensate by attending to specific mid-range or opposite patches. This boundary effect is baked into the model's geometry and could influence feature formation near image edges vs. interior.
       </p>
 
       <h4>4.1.2 Attention Rollout</h4>
       <p>
-        We compute rollout heatmaps after k layers to visualize CLS’s effective receptive field:
+        We compute rollout heatmaps after k layers to visualize CLS's effective receptive field:
       </p>
       <img src="figures/attention_rollout_CLIP.png" alt="Attention rollout heatmap">
       <p>
@@ -185,7 +188,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         The solid blue curve shows that ablating local heads provokes a steep performance drop: accuracy declines from approximately 0.89 at \(k=0\) to 0.80 at \(k=5\), to 0.69 at \(k=10\), and ultimately to under 0.55 by \(k=20\). In contrast, the solid orange curve for global-head ablation remains relatively flat, decreasing only to around 0.85 at \(k=5\), 0.78 at \(k=15\), and holding above 0.75 even when twenty global heads are removed. The dashed line at 0.89 denotes the unablated baseline.
       </p>
       <p>
-        Global ablation exhibits a significantly slower decrease in zero-shot accuracy compared to local head ablation as heads are removed. The sharper performance degradation when ablating local heads demonstrates that ViT's CIFAR-10 classifier leans heavily on short-range, spatially local interactions. Even though ViTs are architecturally ‘global,' their learned attention patterns include crucial local-neighborhood features.
+        Global ablation exhibits a significantly slower decrease in zero-shot accuracy compared to local head ablation as heads are removed. The sharper performance degradation when ablating local heads demonstrates that ViT's CIFAR-10 classifier leans heavily on short-range, spatially local interactions. Even though ViTs are architecturally 'global,' their learned attention patterns include crucial local-neighborhood features.
       </p>
       <img src="figures/ablation_accuracy_CLIP.png" alt="Ablation accuracy">
       <img src="figures/ablation_distance_CLIP.png" alt="Average distance of ablated tokens">
@@ -212,7 +215,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
     <section id="references">
       <h2>References</h2>
       <ol>
-        <li>Dosovitskiy, A., et al. “An Image Is Worth 16×16 Words: Transformers for Image Recognition at Scale.” <em>ICLR</em>, 2020.</li>
+        <li>Dosovitskiy, A., et al. “An Image Is Worth 16x16 Words: Transformers for Image Recognition at Scale.” <em>ICLR</em>, 2020.</li>
         <li>Caron, M., et al. “Emergent Locality in Vision Transformers.” <em>CVPR</em>, 2023.</li>
         <li>Kazemied, P., et al. “Token Information Retention in Intermediate Layers of Vision Transformers.” <em>NeurIPS</em>, 2024.</li>
         <li>LessWrong Community Contributors. “Emergent Localized Attention Patterns in Multimodal Audio Models.” <em>LessWrong</em>, 2023.</li>
