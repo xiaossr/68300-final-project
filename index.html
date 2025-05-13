@@ -28,7 +28,7 @@
       <p>
         Understanding how ViTs balance global context against local structure is critical for interpretability and for guiding architectural improvements. If local interactions dominate early layers, one might imagine hybrid models that explicitly combine convolutional kernels with self-attention. Conversely, if global heads already capture most of the information, simpler Transformer-only designs may suffice. Our project explores this tension by systematically perturbing token representations at various spatial distances and measuring the effect on downstream predictions. By ablating 'local' versus 'distant' tokens in a controlled manner, we aim to quantify the true importance of spatial locality in each attention head and layer.      </p>
       <p>
-        <em>Note:</em> We use CIFAR-10 and the ViT-base-patch-32 model due to limited available compute. This setup serves as a quick prototype and benchmarking platform before scaling to larger datasets or models.
+        <em>Note:</em> We initially used CIFAR-10 and the ViT-base-patch32 model due to limited compute, serving as a quick prototype and benchmarking platform. When more resources were available, we also ran token-distance analyses on a single COCO 2017 validation image using CLIP's ViT-L/14-336 model (Section 4.4), observing consistent locality patterns that suggest our findings generalize across larger models and real-world imagery.
       </p>
     </section>
 
@@ -53,7 +53,7 @@
 
       <h3>3.1 Dataset and Model</h3>
       <p>
-        We use CIFAR-10 exclusively to enable rapid prototyping on limited compute. We load CLIP's ViT backbone as follows:
+        We use CIFAR-10 to enable rapid prototyping on limited compute. We load CLIP's ViT backbone as follows:
       </p>
       <pre><code>model_name = "openai/clip-vit-base-patch32"
 vision = CLIPVisionModelWithProjection.from_pretrained(
@@ -63,6 +63,16 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
 )</code></pre>
       <p>
         This lightweight setup provides a benchmark for quicker iteration before scaling to larger datasets or model variants.
+      </p>
+
+      <p>
+        Our setup for the larger CLIP model is as follows:
+        <pre><code>model_name = "openai/clip-vit-large-patch14-336"
+vision = CLIPVisionModelWithProjection.from_pretrained(
+    model_name,
+    output_attentions=True,     # turn on attention outputs
+    attn_implementation="eager" # silence the manual-fallback warning
+)</code></pre>
       </p>
 
       <h3>3.2 Why Attention Matrices?</h3>
@@ -135,7 +145,14 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
       <p>
         Across all layers and heads, we observe steep attention-weight decay with distance, confirming strong spatial locality throughout the model. Early layers show the sharpest drops, while deeper layers gradually flatten, indicating a progressive incorporation of global context.
       </p>
-      <img src="figures/token_distance_bias_CLIP.png" alt="Token-distance bias curves for each layer in CLIP's ViT">
+      <figure>
+        <img src="figures/token_distance_bias_CLIP.png" alt="Token-distance bias curves for each layer in CLIP's ViT">
+        <figcaption>
+            <strong>Model:</strong> openai/clip-vit-base-patch32 &nbsp;|&nbsp;
+            <strong>Dataset:</strong> CIFAR-10 (single image, 32x32)
+        </figcaption>
+      </figure>
+      
 
       <p>The table below shows, for each layer, the single most 'local' head (smallest mean Euclidean distance) and the single most 'global' head (largest mean Euclidean distance):</p>
       <table>
@@ -175,7 +192,13 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         The plot below shows zero-shot CIFAR-10 accuracy as we vary the Euclidean attention radius 
         (in patch units) in CLIP ViT-base-patch-32:
       </p>
-      <img src="figures/euclidean_attention_radius_CLIP.png" alt="Attention radius vs accuracy">
+      <figure>
+        <img src="figures/euclidean_attention_radius_CLIP.png" alt="Attention radius vs accuracy">
+        <figcaption>
+            <strong>Model:</strong> openai/clip-vit-base-patch32 &nbsp;|&nbsp;
+            <strong>Dataset:</strong> CIFAR-10
+        </figcaption>
+      </figure>
       <p>
         Accuracy rises from ~20% at k=0 to ~81% at k=3, then plateaus near baseline (~89%) by k=6.  
       </p>
@@ -190,8 +213,20 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
       <p>
         Global ablation exhibits a significantly slower decrease in zero-shot accuracy compared to local head ablation as heads are removed. The sharper performance degradation when ablating local heads demonstrates that ViT's CIFAR-10 classifier leans heavily on short-range, spatially local interactions. Even though ViTs are architecturally 'global,' their learned attention patterns include crucial local-neighborhood features.
       </p>
-      <img src="figures/ablation_accuracy_CLIP_k25.png" alt="Ablation accuracy">
-      <img src="figures/ablation_distance_CLIP_k25.png" alt="Average distance of ablated tokens">
+      <figure>
+        <img src="figures/ablation_accuracy_CLIP_k25.png" alt="Ablation accuracy">
+        <figcaption>
+            <strong>Model:</strong> openai/clip-vit-base-patch32 &nbsp;|&nbsp;
+            <strong>Dataset:</strong> CIFAR-10
+        </figcaption>
+        </figure>
+      <figure>
+        <img src="figures/ablation_distance_CLIP_k25.png" alt="Average distance of ablated tokens">
+        <figcaption>
+            <strong>Model:</strong> openai/clip-vit-base-patch32 &nbsp;|&nbsp;
+            <strong>Dataset:</strong> CIFAR-10
+        </figcaption>
+      </figure>
       <p>
         Notably, the average distance of locally ablated tokens remains below 2.0 even when up to 25 heads are removed, whereas globally ablated tokens average over 3.5. This confirms that our local/global head selection effectively separates short-range from long-range attention.      </p>
     
@@ -199,7 +234,13 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
       <p>
         To demonstrate the potential generalizability of our results, we analyze token-distance bias using a single COCO 2017 validation image at 336x336 resolution, processed by CLIP ViT-L/14 with 336 px patches (<code>model: openai/clip-vit-large-patch14-336</code>). For each of the 24 transformer layers, we plot the average self-attention weight as a function of normalized patch-to-patch distance (corner→corner normalized to 1).
       </p>
-      <img src="figures/token_distance_bias_with_zoom_CLIP_COCO.png" alt="Zoomed token-distance bias curves">
+      <figure>
+        <img src="figures/token_distance_bias_with_zoom_CLIP_COCO.png" alt="Zoomed token-distance bias curves">
+        <figcaption>
+          <strong>Model:</strong> openai/clip-vit-large-patch14-336 &nbsp;|&nbsp;
+          <strong>Dataset:</strong> COCO 2017 val (single image, 336x336)
+        </figcaption>
+      </figure>
       <p>
         The plots show a pronounced concentration of attention on very nearby patches. In the full view (top), nearly all layers place over 50% of their attention mass within the closest 5% of the image extent. The zoomed inset (bottom) reveals that attention weight decays by an order of magnitude by a normalized distance of ~0.1 and then flattens near zero beyond ~0.2.
       </p>
@@ -216,7 +257,13 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
       <div class="formula">
         $$\bar{A}_\text{center}(d),\quad \bar{A}_\text{corner}(d).$$
       </div>
-      <img src="figures/center_corner_locality_CLIP.png" alt="Center vs. corner locality">
+      <figure>
+        <img src="figures/center_corner_locality_CLIP.png" alt="Center vs. corner locality">
+        <figcaption>
+          <strong>Model:</strong> openai/clip-vit-large-patch14-336 &nbsp;|&nbsp;
+          <strong>Dataset:</strong> COCO 2017 val (single image, 336x336)
+        </figcaption>
+      </figure>
       <p>
         <strong>Interpretation:</strong> Center patches are more local: a strong peak at d≈0-0.2, then rapid fall-off.
           Corner patches have weaker local peak (fewer neighbors) and spikes at d≈0.65-0.75, corresponding to opposite edges.
@@ -229,7 +276,13 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
       <p>
         We compute rollout heatmaps after k layers to visualize CLS's effective receptive field:
       </p>
-      <img src="figures/attention_rollout_CLIP.png" alt="Attention rollout heatmap">
+      <figure>
+        <img src="figures/attention_rollout_CLIP.png" alt="Attention rollout heatmap">
+        <figcaption>
+            <strong>Model:</strong> openai/clip-vit-large-patch14-336 &nbsp;|&nbsp;
+            <strong>Dataset:</strong> COCO 2017 val (single image, 336x336)
+        </figcaption>
+      </figure>
       <p>
         In this heatmap, bright yellow patches (≈1.0) are the strongest contributors to the final pooled feature, whereas dark purple patches (≈0.25) contribute minimally.        
       </p>

@@ -107,3 +107,7 @@
     border-spacing: 20px 0;
   }
   
+  figure {
+    text-align:center;
+    margin: 5px;
+  }
