@@ -75,7 +75,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         We quantify token-distance bias via the decay of attention weight versus Euclidean patch distance:
       </p>
       <ul>
-        <li><strong>Sharper decay ⇒ stronger locality.</strong> If a layer's curve drops quickly (high weight at \(\,d=0,1\)\, but near zero for \(d>2\)), its heads focus almost exclusively on nearby patches.</li>
+        <li><strong>Sharper decay ⇒ stronger locality.</strong> If a layer's curve drops quickly (high weight at \(\,d=0,1\), but near zero for \(d>2\)), its heads focus almost exclusively on nearby patches.</li>
         <li><strong>Layerwise evolution.</strong> Early layers may be highly local (steep decay); later layers flatten out as global context is incorporated.</li>
         <li><strong>Guides further experiments.</strong> Knowing which layers are local or global informs targeted activation-patching or masking for causal tests.</li>
       </ul>
@@ -92,7 +92,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
           \in \mathbb{R}^{(N+1)\times(N+1)}.$$
       </div>
       <p>
-        Dropping the [CLS] token and averaging over a batch yields patch-to-patch attention maps. We compute an Euclidean distance matrix \(\,D_{i,j}\)\ to define masking radii precisely, and separately derive head "distances" from the attention matrices when ranking heads for ablation.
+        Dropping the [CLS] token and averaging over a batch yields patch-to-patch attention maps. We compute an Euclidean distance matrix \(\,D_{i,j}\) to define masking radii precisely, and separately derive head "distances" from the attention matrices when ranking heads for ablation.
       </p>
 
       <h3>3.5 Attention Masking</h3>
