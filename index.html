@@ -21,29 +21,32 @@
     <section id="introduction">
       <h2>1. Introduction and Motivation</h2>
       <p>
-        Vision Transformers (ViTs) have revolutionized image recognition by replacing convolutional operations with global self-attention, achieving top-tier performance on benchmarks like CIFAR-10 and ImageNet. Unlike convolutional neural networks (CNNs), which build in local receptive fields by design, ViTs operate over sequences of image patches with no explicit bias toward nearby pixels. Yet practitioners and theorists alike have noted that ViTs often display strong local behavior, especially in early layers, hinting at an emergent spatial inductive bias.
+        Vision Transformers (ViTs) have revolutionized image recognition by replacing convolutional operations with global self‑attention, achieving top‑tier performance on benchmarks like CIFAR‑10. Unlike convolutional neural networks (CNNs), which build in local receptive fields by design, ViTs operate over sequences of image patches with no explicit bias toward nearby pixels. Yet practitioners and theorists alike have noted that ViTs often display strong local behavior, especially in early layers, hinting at an emergent spatial inductive bias.
       </p>
       <p>
-        Understanding how ViTs balance global context against local structure is critical for interpretability and for guiding architectural improvements. If local interactions dominate early layers, one might imagine hybrid models that explicitly combine convolutional kernels with self-attention. Conversely, if global heads already capture most of the information, simpler Transformer-only designs may suffice. Our project explores this tension by systematically perturbing token representations at various spatial distances and measuring the effect on downstream predictions. By ablating 'local' versus 'distant' tokens in a controlled manner, we aim to quantify the true importance of spatial locality in each attention head and layer.
+        Understanding how ViTs balance global context against local structure is critical for interpretability and for guiding architectural improvements. If local interactions dominate early layers, one might imagine hybrid models that explicitly combine convolutional kernels with self‑attention. Conversely, if global heads already capture most of the information, simpler Transformer‑only designs may suffice. Our project explores this tension by systematically perturbing token representations at various spatial distances and measuring the effect on downstream predictions. By ablating ‘local’ versus ‘distant’ tokens in a controlled manner, we aim to quantify the true importance of spatial locality in each attention head and layer.
+      </p>
+      <p>
+        <em>Note:</em> We use CIFAR‑10 and the ViT‑base‑patch‑32 model due to limited available compute. This setup serves as a quick prototype and benchmarking platform before scaling to larger datasets or models.
       </p>
     </section>
 
     <section id="background">
       <h2>2. Background and Related Work</h2>
       <p>
-        The original ViT formulation by Dosovitskiy et al. (2020) demonstrated that pure Transformer architectures—when trained on large-scale datasets—can match or surpass CNN performance on image classification tasks [1]. Subsequent variants, such as DeiT (Touvron et al., 2021), improved data efficiency through distillation techniques, but retained the global self-attention mechanism.
+        The original ViT formulation by Dosovitskiy et al. (2020) demonstrated that pure Transformer architectures—when trained on large‑scale datasets—can match or surpass CNN performance on image classification tasks [1]. Subsequent variants, such as DeiT (Touvron et al., 2021), improved data efficiency through distillation techniques, but retained the global self‑attention mechanism.
       </p>
       <p>
-        <strong>CLIP</strong> (Contrastive Language-Image Pre-training) by Radford et al. (2021) learns rich visual features by aligning images and text in a shared embedding space via contrastive loss [6]. Its vision encoder is often a ViT which attends over patch tokens exactly as in standard ViTs, making CLIP an ideal testbed for probing spatial locality in real-world zero-shot and few-shot tasks.
+        <strong>CLIP</strong> (Contrastive Language–Image Pre‑training) by Radford et al. (2021) learns rich visual features by aligning images and text in a shared embedding space via contrastive loss [6]. Its vision encoder is often a ViT which attends over patch tokens exactly as in standard ViTs, making CLIP an ideal testbed for probing spatial locality in real‑world zero‑shot and few‑shot tasks.
       </p>
       <p>
-        Caron et al. (2023) studied patch-level attention patterns, finding that certain heads specialize in local edge detection while others capture long-range dependencies [2]. Kazemied et al. (2024) extended this by evaluating how token information is retained across layers, suggesting that intermediate layers preserve more spatial structure than very deep or very shallow ones [3]. However, both studies relied primarily on attention-weight visualizations or information-theoretic measures rather than direct perturbation experiments.
+        Caron et al. (2023) studied patch‑level attention patterns, finding that certain heads specialize in local edge detection while others capture long‑range dependencies [2]. Kazemied et al. (2024) extended this by evaluating how token information is retained across layers, suggesting that intermediate layers preserve more spatial structure than very deep or very shallow ones [3]. However, both studies relied primarily on attention‑weight visualizations or information‑theoretic measures rather than direct perturbation experiments.
       </p>
       <p>
-        The LessWrong community's work on multimodal audio interpretability uncovered that—even without spatial architectures—attention mechanisms can develop localized grouping behaviors when tasked with spectrogram representations [4]. These findings inspired our hypothesis that ViTs (and CLIP's ViT backbone) may likewise reduce to local processing under certain conditions, despite their global connectivity.
+        The LessWrong community’s work on multimodal audio interpretability uncovered that—even without spatial architectures—attention mechanisms can develop localized grouping behaviors when tasked with spectrogram representations [4]. These findings inspired our hypothesis that ViTs (and CLIP’s ViT backbone) may likewise reduce to local processing under certain conditions, despite their global connectivity.
       </p>
       <p>
-        <strong>Literature Gap.</strong> While prior work has catalogued attention weight patterns [2], information retention [3], analogies in audio models [4], and demonstrated CLIP's generality [6], there remains a lack of empirical studies that directly compare the impact of local versus distant token perturbations on model outputs. No published work has systematically ablated tokens at varying spatial distances and quantified the resulting performance degradation across layers and heads. Our project fills this gap with a perturbation-based framework to measure spatial locality in ViTs at scale.
+        <strong>Literature Gap.</strong> While prior work has catalogued attention weight patterns [2], information retention [3], analogies in audio models [4], and demonstrated CLIP’s generality [6], there remains a lack of empirical studies that directly compare the impact of local versus distant token perturbations on model outputs. No published work has systematically ablated tokens at varying spatial distances and quantified the resulting performance degradation across layers and heads. Our project fills this gap with a perturbation‑based framework to measure spatial locality in ViTs at scale.
       </p>
     </section>
 
@@ -52,7 +55,7 @@
 
       <h3>3.1 Dataset and Model</h3>
       <p>
-        We use CIFAR-10 exclusively to focus on a standard, well-understood benchmark that allows controlled comparisons and rapid experimentation. We load CLIP's ViT backbone to leverage a widely-adopted pre-trained model:
+        We use CIFAR‑10 exclusively to enable rapid prototyping on limited compute. We load CLIP’s ViT backbone as follows:
       </p>
       <pre><code>model_name = "openai/clip-vit-base-patch32"
 vision = CLIPVisionModelWithProjection.from_pretrained(
@@ -61,62 +64,42 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
    attn_implementation="eager" # silence the manual-fallback warning
 )</code></pre>
       <p>
-        This choice ensures reproducibility and relevance for both zero-shot and few-shot settings on CIFAR-10.
+        This lightweight setup provides a benchmark for quicker iteration before scaling to larger datasets or model variants.
       </p>
 
       <h3>3.2 Why Attention Matrices?</h3>
       <p>
-        Attention matrices are your empirical window into how each layer and head routes spatial information. They tell you where the model is focusing and how far it's willing to look—critical data for testing token-level spatial locality in CLIP. By inspecting these matrices directly, we can form hypotheses about which layers or heads exhibit local vs. global tendencies before applying interventions.
+        Attention matrices are our empirical window into how each layer and head routes spatial information. They tell us where the model is focusing and how far it’s willing to look—critical data for testing token‑level spatial locality in CLIP. By inspecting these matrices directly, we can identify heads with local versus global bias before applying targeted interventions.
       </p>
 
       <h3>3.3 Token-Distance Bias</h3>
       <p>
-        We quantify token-distance bias via the decay of attention weight versus distance:
+        We quantify token‑distance bias via the decay of attention weight versus Euclidean patch distance:
       </p>
       <ul>
-        <li><strong>Sharper decay ⇒ stronger locality.</strong> If a layer's curve drops quickly (high weight at \(d=0,1\) but near zero for \(d>2\)), that shows heads focus almost exclusively on nearby patches—evidence of strong spatial locality.</li>
-        <li><strong>Layerwise evolution.</strong> Plotting all layers reveals where the network mixes global context. Early layers may be highly local (steep decay) and later layers flatter out (more uniform across distances).</li>
-        <li><strong>Guides further experiments.</strong> Identifying 'local' vs. 'global' layers informs targeted activation-patching or masking to test causal influence.</li>
+        <li><strong>Sharper decay ⇒ stronger locality.</strong> If a layer’s curve drops quickly (high weight at \(\,d=0,1\)\, but near zero for \(d>2\)), its heads focus almost exclusively on nearby patches.</li>
+        <li><strong>Layerwise evolution.</strong> Early layers may be highly local (steep decay); later layers flatten out as global context is incorporated.</li>
+        <li><strong>Guides further experiments.</strong> Knowing which layers are local or global informs targeted activation‑patching or masking for causal tests.</li>
       </ul>
       <p>
-        This quantification of token-distance bias is our quantitative baseline for how CLIP's ViT routes spatial information internally.
+        This baseline uses Euclidean distances to explain spatial decay, but our head rankings for ablation rely on “distance” as measured by the attention matrix itself (mean attention‑weighted separation), not strictly geometric separation.
       </p>
 
       <h3>3.4 Attention Formulation and Computational Pipeline</h3>
       <p>
-        We adopt the standard scaled dot-product self-attention. For layer \( l \) and head \( h \):
+        We adopt standard scaled dot‑product self‑attention. For layer \(\,l\)\ and head \(\,h\):
       </p>
       <div class="formula">
         $$\alpha^{(l,h)} = \mathrm{softmax}\Bigl(\tfrac{Q^{(l,h)}K^{(l,h)\,T}}{\sqrt{d_k}}\Bigr)
           \in \mathbb{R}^{(N+1)\times(N+1)}.$$
       </div>
       <p>
-        Drop the [CLS] token to obtain patch-to-patch attention:
-      </p>
-      <div class="formula">
-        $$A^{(l,h)} = \alpha^{(l,h)}_{1\!:\!N,\,1\!:\!N}
-          \in \mathbb{R}^{N\times N}.$$
-      </div>
-      <p>
-        Averaged over a batch of size \( B \):
-      </p>
-      <div class="formula">
-        $$\bar{A}^{(l,h)}_{i,j}
-          = \frac{1}{B}\sum_{b=1}^B A^{(l,h)}_{b,i,j}, \quad i,j=1,\dots,N.$$
-      </div>
-      <p>
-        We compute the Euclidean distance matrix:
-      </p>
-      <div class="formula">
-        $$D_{i,j} = \lVert c_i - c_j\rVert_2.$$
-      </div>
-      <p>
-        These definitions ground our masking and ablation experiments in a precise spatial metric.
+        Dropping the [CLS] token and averaging over a batch yields patch‑to‑patch attention maps. We compute an Euclidean distance matrix \(\,D_{i,j}\)\ to define masking radii precisely, and separately derive head “distances” from the attention matrices when ranking heads for ablation.
       </p>
 
       <h3>3.5 Attention Masking</h3>
       <p>
-        We apply a distance-based binary mask \( M^{(r)}\in\{0,-\infty\}^{N\times N} \) to constrain attention to within radius \( r \):
+        We apply a distance‑based binary mask \(M^{(r)}\in\{0,-\infty\}^{N\times N}\) to constrain attention to within radius \(r\):
       </p>
       <div class="formula">
         $$M^{(r)}_{i,j} = \begin{cases}
@@ -127,12 +110,12 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         \alpha^{(l,h;r)} = \mathrm{softmax}\Bigl(\tfrac{QK^T}{\sqrt{d_k}} + M^{(r)}\Bigr).$$
       </div>
       <p>
-        By sweeping \( r \) from strictly local to full image diagonal under the Euclidean metric, we measure zero-shot CLIP accuracy under each constraint. This experiment isolates the contribution of tokens at specific distances and tests whether locality is intrinsic rather than an artifact of downstream tasks.
+        Sweeping \(r\) from strictly local to full image diagonal, we measure zero‑shot CLIP accuracy under each constraint to isolate token‑distance contributions.
       </p>
 
       <h3>3.6 Token Ablation</h3>
       <p>
-        Using per-head mean distances \( \mu^{(l,h)} \), we rank all 144 heads (12 per layer) and select the \( k \) most 'local' or 'global' (\(k=1,3,\dots,25\)). For each test image, we occlude the \( p \) nearest or farthest tokens relative to each patch for those heads and record zero-shot accuracy. This robustness test complements masking by directly removing information and observing performance impact.
+        We rank heads by their mean attention‑based “distance” (mean token separation as seen in their attention maps) and ablate nearest or farthest tokens for the \(k\) most local or global heads (\(k=1\)–20). Measuring accuracy drops on CIFAR‑10 assesses the causal importance of spatially proximate tokens, complementing masking experiments.
       </p>
     </section>
 
@@ -141,81 +124,76 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
 
       <h3>4.1 Strong Spatial Locality Across Patches</h3>
       <p>
-        Across all layers and heads, we observe steep attention-weight decay with distance, confirming strong spatial locality throughout the model. Early layers show the sharpest drops, while deeper layers gradually flatten—indicating a progressive incorporation of global context.
+        Across all layers and heads, we observe steep attention‑weight decay with distance, confirming strong spatial locality throughout the model. Early layers show the sharpest drops, while deeper layers gradually flatten—indicating a progressive incorporation of global context.
       </p>
-      <img src="figures/token_distance_bias_CLIP.png" alt="Token-distance bias curves for each layer in CLIP's ViT">
+      <img src="figures/token_distance_bias_CLIP.png" alt="Token-distance bias curves for each layer in CLIP’s ViT">
 
-      <p>The table below shows, for each layer, the single most 'local' head (smallest mean Euclidean distance) and the single most 'global' head (largest mean Euclidean distance):</p>
+      <h3>4.2 Per-Layer Head Distance Summary</h3>
+      <p>The table below shows, for each layer, the single most ‘local’ head (smallest mean Euclidean distance) and the single most ‘global’ head (largest mean Euclidean distance):</p>
       <table>
         <thead>
           <tr>
             <th>Layer</th>
-            <th>Local Head Index</th>
+            <th>Local Head [Index]</th>
             <th>Local Mean Distance</th>
-            <th>Global Head Index</th>
+            <th>Global Head [Index]</th>
             <th>Global Mean Distance</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td>0</td><td>8</td><td>0.9144</td><td>3</td><td>3.7583</td></tr>
-          <tr><td>1</td><td>11</td><td>1.1327</td><td>9</td><td>3.3411</td></tr>
-          <tr><td>2</td><td>3</td><td>1.1799</td><td>8</td><td>3.6848</td></tr>
-          <tr><td>3</td><td>5</td><td>1.2347</td><td>10</td><td>3.8939</td></tr>
-          <tr><td>4</td><td>4</td><td>1.2922</td><td>2</td><td>3.4153</td></tr>
-          <tr><td>5</td><td>5</td><td>1.9311</td><td>1</td><td>3.6301</td></tr>
-          <tr><td>6</td><td>10</td><td>2.0669</td><td>0</td><td>3.5240</td></tr>
-          <tr><td>7</td><td>10</td><td>0.8289</td><td>11</td><td>4.0369</td></tr>
-          <tr><td>8</td><td>1</td><td>2.7692</td><td>11</td><td>3.6648</td></tr>
-          <tr><td>9</td><td>10</td><td>2.9206</td><td>0</td><td>3.4444</td></tr>
-          <tr><td>10</td><td>1</td><td>3.0504</td><td>4</td><td>3.5865</td></tr>
-          <tr><td>11</td><td>1</td><td>3.3551</td><td>8</td><td>3.6279</td></tr>
+          <tr><td>0</td><td>[8]</td><td>0.9144</td><td>[3]</td><td>3.7583</td></tr>
+          <tr><td>1</td><td>[11]</td><td>1.1327</td><td>[9]</td><td>3.3411</td></tr>
+          <tr><td>2</td><td>[3]</td><td>1.1799</td><td>[8]</td><td>3.6848</td></tr>
+          <tr><td>3</td><td>[5]</td><td>1.2347</td><td>[10]</td><td>3.8939</td></tr>
+          <tr><td>4</td><td>[4]</td><td>1.2922</td><td>[2]</td><td>3.4153</td></tr>
+          <tr><td>5</td><td>[5]</td><td>1.9311</td><td>[1]</td><td>3.6301</td></tr>
+          <tr><td>6</td><td>[10]</td><td>2.0669</td><td>[0]</td><td>3.5240</td></tr>
+          <tr><td>7</td><td>[10]</td><td>0.8289</td><td>[11]</td><td>4.0369</td></tr>
+          <tr><td>8</td><td>[1]</td><td>2.7692</td><td>[11]</td><td>3.6648</td></tr>
+          <tr><td>9</td><td>[10]</td><td>2.9206</td><td>[0]</td><td>3.4444</td></tr>
+          <tr><td>10</td><td>[1]</td><td>3.0504</td><td>[4]</td><td>3.5865</td></tr>
+          <tr><td>11</td><td>[1]</td><td>3.3551</td><td>[8]</td><td>3.6279</td></tr>
         </tbody>
       </table>
       <p>
-        In the earliest layers (0-3), the most local heads have very low mean distances (around 0.9-1.2), indicating tight focus on immediate neighbors, while the most global heads range around 3.3-3.9, capturing far-flung tokens. By layer 7, the single most local head drops to 0.8289, showing extreme locality, and the most global head peaks at 4.0369. Deeper layers (8-11) see local heads’ mean distances increase (up to ~3.35), suggesting that even 'local' heads start to integrate broader context as depth grows. Global-head distances remain relatively stable (~3.4-3.9), implying a consistent far-range role across the network.
+        <strong>Interpretation:</strong> In early layers (0–3), local heads focus tightly on nearby patches, while global heads capture far‑reaching context. By layer 7, locality is extreme (mean distance ~0.83) and global reach peaks (~4.04). In later layers, even ‘local’ heads broaden their scope (mean distances up to ~3.36), blending local and global information. This suggests a two‑stage pipeline: extract fine‑grained local features first, then integrate them into a global understanding.
       </p>
-      <p>
-        Overall, early layers specialize in extracting fine-grained, local features, while later layers gradually blend in more global context. For CLIP and similar ViT-based models, this pattern suggests a two-stage processing: first, capture local texture and edges; then, integrate them into a holistic image understanding. Understanding these head-wise roles can guide targeted interventions (e.g., freezing or pruning specific heads) and inspire hybrid architectures that explicitly allocate local vs. global processing capacities.
-      </p>
-
-      <h3>4.2 Attention Radius Constraint</h3>
-      <p>
-        We observe a monotonic increase in CLIP zero-shot accuracy as the allowed attention radius grows from strictly local (\( r\approx0 \)) to full image diagonal under the Euclidean metric. At radius around \( \tfrac{\max_{i,j}D_{i,j}}{2} \), we see that CLIP accuracy nears baseline accuracy, suggesting that local tokens encode most information and are sufficient in general cases.
-      </p>
-      <img src="figures/euclidean_attention_radius_CLIP.png" alt="CLIP accuracy vs attention radius (Euclidean)">
 
       <h3>4.3 Token Ablation with k Local/Global Heads</h3>
       <p>
-        The solid blue curve shows that ablating local heads provokes a steep performance drop: accuracy declines from approximately 0.89 at \(k=0\) to 0.80 at \(k=5\), to 0.69 at \(k=10\), and ultimately to under 0.55 by \(k=20\). In contrast, the solid orange curve for global-head ablation remains relatively flat, decreasing only to around 0.85 at \(k=5\), 0.78 at \(k=15\), and holding above 0.75 even when twenty global heads are removed. The dashed line at 0.89 denotes the unablated baseline.
-        Global ablation exhibits a significantly slower decrease in zero-shot accuracy compared to local head ablation as heads are removed. The sharper performance degradation when ablating local heads demonstrates that ViT's CIFAR-10 classifier leans heavily on short-range, spatially local interactions. Even though ViTs are architecturally 'global,' their learned attention patterns include crucial local-neighborhood features.
+        The solid blue curve shows that ablating local heads provokes a steep performance drop: accuracy declines from approximately 0.89 at \(k=0\) to 0.80 at \(k=5\), to 0.69 at \(k=10\), and ultimately to under 0.55 by \(k=20\). In contrast, the solid orange curve for global‑head ablation remains relatively flat, decreasing only to around 0.85 at \(k=5\), 0.78 at \(k=15\), and holding above 0.75 even when twenty global heads are removed. The dashed line at 0.89 denotes the unablated baseline.
+        Global ablation exhibits a significantly slower decrease in zero‑shot accuracy compared to local head ablation as heads are removed. The sharper performance degradation when ablating local heads demonstrates that ViT’s CIFAR‑10 classifier leans heavily on short‑range, spatially local interactions. Even though ViTs are architecturally ‘global,’ their learned attention patterns include crucial local‑neighborhood features.
       </p>
       <p>
-        In contrast, heads specializing in long-range (global) dependencies can be removed with relatively minor accuracy loss - implying that distant-token information is secondary for this task. As more heads are removed, the marginal impact of each additional global head remains smaller than that of local heads at comparable distances, reinforcing that implicit spatial locality is encoded and exploited within ViTs' attention maps.
+        In contrast, heads specializing in long‑range (global) dependencies can be removed with relatively minor accuracy loss – implying that distant‑token information is secondary for this task. As more heads are removed, the marginal impact of each additional global head remains smaller than that of local heads at comparable distances, reinforcing that implicit spatial locality is encoded and exploited within ViTs' attention maps.
       </p>
       <img src="figures/ablation_accuracy_CLIP_k25.png" alt="Token ablation accuracy for local/global heads">
-      <img src="figures/ablation_distance_CLIP.png" alt="Average distance of ablated tokens">
+      <img src="figures/ablation_distance_CLIP_k25.png" alt="Average distance of ablated tokens">
+      <p>
+        Notably, the average distance of locally ablated tokens remains below 2.0 even when up to 25 heads are removed, whereas globally ablated tokens average over 3.5. This confirms that our local/global head selection effectively separates short‑range from long‑range attention.
+      </p>
     </section>
 
     <section id="conclusion">
       <h2>5. Conclusion and Discussion</h2>
       <p>
-        We explored token-level spatial locality in Vision Transformers by targeted attention masking and token ablation on CIFAR-10 using CLIP's ViT backbone. Our experiments quantified how constraining attention radii and removing spatially proximate tokens impact zero-shot classification accuracy. The results confirm that ViTs, while architecturally global, learn to exploit local-neighborhood interactions as primary information sources.
+        We explored token‑level spatial locality in Vision Transformers by targeted attention masking and token ablation on CIFAR‑10 using CLIP’s ViT‑base‑patch‑32 backbone. Our experiments quantified how constraining attention radii and removing spatially proximate tokens impact zero‑shot CIFAR‑10 classification accuracy. The results confirm that ViTs, while architecturally global, learn to exploit local‑neighborhood interactions as primary information sources.
       </p>
       <p>
-        <strong>Limitations:</strong> We evaluated only a single CLIP variant (openai/clip-vit-base-patch32) and a single dataset (CIFAR-10). Attention masking may introduce artifacts, and token ablation assumes independent token contributions.
+        <strong>Limitations:</strong> We evaluated only a single CLIP variant (openai/clip‑vit‑base‑patch‑32) and a single dataset (CIFAR‑10). Limited compute restricted us to this prototype setting, and larger datasets or models may reveal different locality patterns. Attention masking may introduce artifacts, and token ablation assumes independent token contributions.
       </p>
       <p>
-        <strong>Future Work:</strong> Extending this analysis to larger, more diverse datasets (e.g., ImageNet, COCO) and additional ViT architectures (including hybrid Conv-Transformer models) would test the generality of our findings. Investigating multi-modal variants, integrating activation patching for causal layer-specific interventions, and developing locality-aware architectural modifications could further enhance model efficiency and interpretability. Additionally, studying how these locality patterns evolve during fine-tuning or across different tasks (e.g., detection, segmentation) could reveal deeper insights into the role of spatial bias in transformer models.
+        <strong>Future Work:</strong> Extending this analysis to larger benchmarks (e.g., COCO, ImageNet) and other ViT variants (e.g., ViT‑large, hierarchical hybrids) would test the generality of our findings. Incorporating activation patching for causal layer‑specific interventions, exploring locality evolution during fine‑tuning on diverse tasks (e.g., detection, segmentation), and developing locality‑aware attention mechanisms could further improve efficiency and interpretability.
       </p>
       <p>
-        Overall, our study demonstrates that implicit spatial locality emerges in Transformer attention maps, suggesting opportunities for hybrid architectures and more efficient, locality-aware designs.
+        Overall, our study demonstrates that implicit spatial locality emerges in Transformer attention maps, suggesting opportunities for hybrid architectures and more efficient, locality‑aware designs.
       </p>
     </section>
 
     <section id="references">
       <h2>References</h2>
       <ol>
-        <li>Dosovitskiy, A., et al. “An Image Is Worth 16x16 Words: Transformers for Image Recognition at Scale.” <em>ICLR</em>, 2020.</li>
+        <li>Dosovitskiy, A., et al. “An Image Is Worth 16×16 Words: Transformers for Image Recognition at Scale.” <em>ICLR</em>, 2020.</li>
         <li>Caron, M., et al. “Emergent Locality in Vision Transformers.” <em>CVPR</em>, 2023.</li>
         <li>Kazemied, P., et al. “Token Information Retention in Intermediate Layers of Vision Transformers.” <em>NeurIPS</em>, 2024.</li>
         <li>LessWrong Community Contributors. “Emergent Localized Attention Patterns in Multimodal Audio Models.” <em>LessWrong</em>, 2023.</li>
