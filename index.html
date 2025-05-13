@@ -276,7 +276,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         </figure>
         <p>
         <strong>Early layers (0-2)</strong> start off very local (AUC ≈ 0.0015), consistent with detecting edges and textures in a tight neighborhood.<br>
-        <strong>Mid layers (3-10)</strong> become progressively less local—peaking around layer 6 (AUC ≈ 0.0035)—as the model integrates broader context.<br>
+        <strong>Mid layers (3-10)</strong> become progressively less local - peaking around layer 6 (AUC ≈ 0.0035) - as the model integrates broader context.<br>
         <strong>Late layers (11-23)</strong> swing back to strong locality (AUC drops to ≈ 0.0017), as the network refines fine-grained details.
         </p>
 
@@ -296,7 +296,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         <ol>
             <li>
             <strong>Uniform locality at the extremes:</strong>  
-            Layer 0 and Layer 23 are almost entirely dark—every head focuses on immediate neighbors.
+            Layer 0 and Layer 23 are almost entirely dark - every head focuses on immediate neighbors.
             </li>
             <li>
             <strong>Heterogeneity in the middle:</strong>  
@@ -304,7 +304,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
             </li>
             <li>
             <strong>Peak “globalness” around layer 6:</strong>  
-            The brightest cell (layer 6, head 2) marks the maximum AUC in the network—this head links the most distant patches.
+            The brightest cell (layer 6, head 2) marks the maximum AUC in the network - this head links the most distant patches.
             </li>
             <li>
             <strong>Return to locality:</strong>  
@@ -332,20 +332,55 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         <strong>Implication:</strong> There is positional asymmetry in self-attention: center tokens concentrate on immediate vicinity, whereas border/corner tokens compensate by attending to specific mid-range or opposite patches. This boundary effect is baked into the model's geometry and could influence feature formation near image edges vs. interior.
       </p>
       
-      <h4>4.4.4 Attention Rollout</h4>
-      <p>
-        We compute rollout heatmaps after k layers to visualize CLS's effective receptive field:
-      </p>
-      <figure>
-        <img src="figures/attention_rollout_CLIP.png" alt="Attention rollout heatmap">
+      <h3>4.4.4 Attention Rollout: CLS Token to Image Patches</h3>
+        <figure>
+        <img src="figures/attention_rollout_CLIP.png" alt="Attention Rollout: CLS → patches">
         <figcaption>
             <strong>Model:</strong> openai/clip-vit-large-patch14-336 &nbsp;|&nbsp;
             <strong>Dataset:</strong> COCO 2017 val (single image, 336x336)
-        </figcaption>
-      </figure>
-      <p>
-        In this heatmap, bright yellow patches (≈1.0) are the strongest contributors to the final pooled feature, whereas dark purple patches (≈0.25) contribute minimally.        
-      </p>
+          </figcaption>
+        </figure>
+
+        <p>
+        Rather than inspect each layer's attention separately, we <em>cascade</em> them:
+        </p>
+        <ul>
+        <li>Initialize <code>jointAttn</code> to the identity matrix so every token attends to itself.</li>
+        <li>At each layer, average the 16 heads into one attention matrix \(A∈ℝ^{(P+1)×(P+1)}\).</li>
+        <li>Add a residual connection and renormalize rows to sum to 1:
+            <div class="formula" style="text-align:center;">
+            \(A^{(\mathrm{res})} = \frac{A + I}{(A + I)\mathbf{1}}\).
+            </div>
+        </li>
+        <li>Update the joint attention:
+            <div class="formula" style="text-align:center;">
+            \(\text{jointAttn} \leftarrow A^{(\mathrm{res})} \times \text{jointAttn}\).
+            </div>
+        </li>
+        </ul>
+        <p>
+        After all 24 layers, the vector <code>jointAttn[0,1:]</code> gives the total attention flow from [CLS] to each patch.
+        </p>
+
+        <p>
+        Extract the rollout vector 
+        \(r_j = \text{jointAttn}[0,j]\) for each patch index \(j\), then scale so \(\max_j r_j = 1\).  
+        Reshape \(\{r_j\}\) into a \(\sqrt P\times\sqrt P\) grid and overlay it on the image with a semi-transparent colormap.
+        </p>
+
+        <p>
+        Patches colored yellow are those the [CLS] token “listens” to most after all 24 layers; purple patches contribute minimally.
+        </p>
+        <ul>
+        <li>Bright yellow regions (e.g., window, vase) drive the global summary.</li>
+        <li>Dark purple areas (floor, walls) play little role in the final embedding.</li>
+        <li>Green intermediate tones show secondary contextual contributions.</li>
+        </ul>
+
+        <p>
+        Rollout reveals the <em>cumulative</em> effect of attention across all layers, not just a single slice. It uncovers the model's effective receptive field - exactly which patches shape the final [CLS] embedding used for zero-shot classification or retrieval.  
+        As a diagnostic, it highlights whether key regions (e.g., a person's face) are under-attended, guiding targeted improvements in architecture or data.
+        </p>
     </section>
 
     <section id="conclusion">
