@@ -70,7 +70,7 @@
   
   /* Images */
   img {
-    max-width: 80%;
+    max-width: 90%;
     height: auto;
     margin: 1rem 0;
     border: 1px solid #dee2e6;
@@ -103,11 +103,7 @@
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
   }
 
-  td {
-    width:7%;
-  }
-
-  th {
-    text-align: left;
+  table {
+    border-spacing: 20px 0;
   }
   

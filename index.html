@@ -95,18 +95,7 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         Dropping the [CLS] token and averaging over a batch yields patch-to-patch attention maps. We compute an Euclidean distance matrix \(\,D_{i,j}\)\ to define masking radii precisely, and separately derive head "distances" from the attention matrices when ranking heads for ablation.
       </p>
 
-      <h3>3.5 Attention Rollout</h3>
-      <p>
-        Using the attention-rollout method (Abnar & Zuidema, 2020) [7], we back-track from CLS to input patches:
-      </p>
-      <div class="formula">
-        $$R = \prod_{l=1}^k (\alpha^{(l)} + I),$$
-      </div>
-      <p>
-        where \(I\) adds residual identity. The resulting heatmap \(R\) shows each patch's influence on the final representation.
-      </p>
-
-      <h3>3.6 Attention Masking</h3>
+      <h3>3.5 Attention Masking</h3>
       <p>
         We apply a distance-based binary mask \(M^{(r)}\in\{0,-\infty\}^{N\times N}\) to constrain attention to within radius \(r\):
       </p>
@@ -122,9 +111,20 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         Sweeping \(r\) from strictly local to full image diagonal, we measure zero-shot CLIP accuracy under each constraint to isolate token-distance contributions.
       </p>
 
-      <h3>3.7 Token Ablation</h3>
+      <h3>3.6 Token Ablation</h3>
       <p>
         We rank heads by their mean attention-based "distance" (mean token separation as seen in their attention maps) and ablate nearest or farthest tokens for the \(k\) most local or global heads (\(k=1,3,\dots,25\)). Measuring accuracy drops on CIFAR-10 assesses the causal importance of spatially proximate tokens, complementing masking experiments.
+      </p>
+      
+      <h3>3.7 Attention Rollout</h3>
+      <p>
+        Using the attention-rollout method (Abnar & Zuidema, 2020) [7], we back-track from CLS to input patches:
+      </p>
+      <div class="formula">
+        $$R = \prod_{l=1}^k (\alpha^{(l)} + I),$$
+      </div>
+      <p>
+        where \(I\) adds residual identity. The resulting heatmap \(R\) shows each patch's influence on the final representation.
       </p>
     </section>
 
@@ -241,10 +241,20 @@ vision = CLIPVisionModelWithProjection.from_pretrained(
         We explored token-level spatial locality in Vision Transformers by targeted attention masking and token ablation on CIFAR-10 using CLIP's ViT-base-patch-32 backbone. Our experiments quantified how constraining attention radii and removing spatially proximate tokens impact zero-shot CIFAR-10 classification accuracy. The results confirm that ViTs, while architecturally global, learn to exploit local-neighborhood interactions as primary information sources.
       </p>
       <p>
-        <strong>Limitations:</strong> We evaluated only a single CLIP variant (openai/clip-vit-base-patch-32) and a single dataset (CIFAR-10). Limited compute restricted us to this prototype setting, and larger datasets or models may reveal different locality patterns. Attention masking may introduce artifacts, and token ablation assumes independent token contributions.
+        <strong>Limitations:</strong>  
+        Our analysis of token-distance bias on COCO was limited to one image and one model variant (openai/clip-vit-large-patch14-336). While CIFAR-10 prototyping confirmed similar patterns at small scale, we did not exhaustively test other datasets, resolutions or Transformer variants. Attention masking and rollout assumptions (e.g. linear combination of attentions, neglect of non-attention pathways) may also introduce artifacts.
       </p>
       <p>
-        <strong>Future Work:</strong> Extending this analysis to larger benchmarks (e.g., COCO, ImageNet) and other ViT variants (e.g., ViT-large, hierarchical hybrids) would test the generality of our findings. Incorporating activation patching for causal layer-specific interventions, exploring locality evolution during fine-tuning on diverse tasks (e.g., detection, segmentation), and developing locality-aware attention mechanisms could further improve efficiency and interpretability.
+        <strong>Future Work:</strong>  
+        To validate and extend these findings, we plan to:
+      </p>
+      <ul>
+        <li>Scale to diverse COCO images and full COCO splits, as well as larger benchmarks like ImageNet and ADE20K.</li>
+        <li>Compare multiple ViT architectures (base, large, hybrid) and resolutions (224, 336, 512 px) to assess how patch size and depth affect locality.</li>
+        <li>Integrate activation-patching or intervention experiments for causal verification of local vs. global head roles.</li>
+        <li>Explore task-specific locality patterns in detection, segmentation, and video transformers.</li>
+        <li>Investigate architectural modifications—e.g. locality-aware attention biases or hybrid convolution-attention layers—to improve efficiency and interpretability.</li>
+      </ul>
       </p>
       <p>
         Overall, our study demonstrates that implicit spatial locality emerges in Transformer attention maps, suggesting opportunities for hybrid architectures and more efficient, locality-aware designs.
